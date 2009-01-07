@@ -1,10 +1,10 @@
 //
-//		Compiler for CS 480
-//	class Lexer
+//		Compiler for CS 480 - Winter 2009
+//		class Lexer
 //
 //		Written by Tim Budd, Winter term 2006
 //
-//		modified by: 
+//		modified by: Cullen King <kingcu@onid.orst.edu>
 //
 
 import java.io.*;
