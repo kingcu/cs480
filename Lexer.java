@@ -43,34 +43,34 @@ public class Lexer {
 			throw new ParseException(0);
 		}
 		return cc;
-	}	
-	
+	}
+
 	public void nextLex() throws ParseException {
 		int c = currentChar();
-		System.out.println(c);
 		token = "";
 
-		//if(Character.isLetterOrDigit((char) c)) {
-			while(Character.isLetterOrDigit((char) c) && Pattern.matches("\\S", Character.toString((char)c))) {
-			//while(Character.isLetterOrDigit((char) c) && !Character.isWhitespace((char)c)) {
+		if(Character.isLetterOrDigit((char) c)) {
+			while(Character.isLetterOrDigit((char) c) && !Character.isWhitespace((char)c)) {
 				token = token + (char)c;
 				c = currentChar();
 			}
 
-			//if(!Character.isWhitespace((char)c)) {
-			if(Pattern.matches("\\S", Character.toString((char)c))) {
+			if(!Character.isWhitespace((char)c)) {
 				try {
 					input.unread(c);
 				} catch(IOException e) {
 					System.out.println("FUCKER UP OH NOS");
 				}
 			}
-			/*
-		} else if(Pattern.matches("\\S", Character.toString((char)c))) {
-		//} else if(!Character.isWhitespace((char)c)) {
+		} else if(!Character.isWhitespace((char)c)) {
 			token = token + (char)c;
+		} else if(Pattern.matches("\\s", Character.toString((char)c))) {
+				c = currentChar();
+			while(Character.isLetterOrDigit((char) c) && Pattern.matches("\\S", Character.toString((char)c))) {
+				token = token + (char)c;
+				c = currentChar();
+			}
 		}
-		*/
 
 		if(c == -1) { //end of input, toss to 7 so we can exit
 			tokenType = 7;
