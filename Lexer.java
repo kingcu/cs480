@@ -40,6 +40,20 @@ public class Lexer {
 		throwBack(c); //broke outta loop, toss back last char.
 	}
 
+  private void skipComment() throws ParseException {
+    int c = currentChar();
+    if((char)c == '{') {
+      while((char)c != '}') {
+        if(c == -1) //we have an unterminated comment
+          throw new ParseException(1);
+        c = currentChar(); //skip comments
+      }
+      skipWhiteSpace();
+    } else {
+     throwBack(c);
+    }
+  }
+
 	private int currentChar() throws ParseException {
 		int cc;
 
@@ -65,17 +79,8 @@ public class Lexer {
 		int c;
 		token = "";
 		skipWhiteSpace(); //get rid of any preceding whitespaces
+		skipComment();
 		c = currentChar();
-
-		if((char)c == '{') {
-			while((char)c != '}') {
-				if(c == -1) //we have an unterminated comment
-					throw new ParseException(1);
-				c = currentChar(); //skip comments
-			}
-			c = currentChar();
-			skipWhiteSpace();
-		} 
 
 		if(Character.isLetter((char) c)) {
 			while(Character.isLetterOrDigit((char) c) && !Character.isWhitespace((char)c)) {
