@@ -40,6 +40,20 @@ public class Lexer {
 		throwBack(c); //broke outta loop, toss back last char.
 	}
 
+	private void skipComment() throws ParseException {
+		int c = currentChar();
+		if((char)c == '{') {
+			while((char)c != '}') {
+				if(c == -1) //we have an unterminated comment
+					throw new ParseException(1);
+				c = currentChar(); //skip comments
+			}
+			skipWhiteSpace();
+		} else {
+		 throwBack(c);
+		}	 
+	}
+
 	private int currentChar() throws ParseException {
 		int cc;
 
@@ -65,45 +79,10 @@ public class Lexer {
 		int c;
 		token = "";
 		skipWhiteSpace(); //get rid of any preceding whitespaces
+		skipComment(); //get rid of any comments maybe lying around
+		
 		c = currentChar();
-
-		if((char)c == '{') {
-			while((char)c != '}') {
-				if(c == -1) //we have an unterminated comment
-					throw new ParseException(1);
-				c = currentChar(); //skip comments
-			}
-			c = currentChar();
-			skipWhiteSpace();
-		} 
-
-		if(Character.isLetter((char) c)) {
-			while(Character.isLetterOrDigit((char) c) && !Character.isWhitespace((char)c)) {
-				token = token + (char)c;
-				c = currentChar();
-			}
-
-			if(!Character.isWhitespace((char)c)) {
-				throwBack(c);
-			}
-		} else if(Character.isDigit((char)c)) {
-			token = token += (char)c;
-			c = currentChar();
-			int num_points = 0;
-			while(Character.isDigit((char)c) || (char)c == '.') {
-				if((char)c == '.')
-					num_points += 1;
-				token += (char)c;
-				c = currentChar();
-			}
-			if(num_points == 0)
-				tokenType = intToken;
-			else if(num_points == 1)
-				tokenType = realToken;
-			else
-				throw new ParseException(46);
-			throwBack(c);
-		} else if((char)c == '"') { //TODO: check no comments within comments
+		if((char)c == '"') { //TODO: check no comments within comments
 			c = currentChar();
 			while((char)c != '"') {
 				if(c == -1) //unterminated string
@@ -111,21 +90,17 @@ public class Lexer {
 				token = token + (char)c;
 				c = currentChar();
 			}
-			tokenType = stringToken;
-		} else if((char)c == '<') {
-			token = token + (char)c;
-			c = currentChar();
-			if((char)c == '<' || (char)c == '=') {
-				token = token + (char)c;
-			} else {
-				throwBack(c);
-			}
-			tokenType = 6;
-		} else {
+			c = currentChar(); //eat up the close quote
+		} else if(c != -1) {
 			token += (char)c;
-			tokenType = 6;
+			c = currentChar();
+			while(Pattern.matches("[^*<>!=\\&\\^%/+-.\"{}\\s]", Character.toString((char)c))) {
+				token = token + (char)c;
+				c = currentChar();
+			}
 		}
-		
+		throwBack(c);
+
 		if(c == -1) { //end of input, toss to 7 so we can exit
 			tokenType = 7;
 		} else if(Pattern.matches(IDENT_REGEX, token)) {
