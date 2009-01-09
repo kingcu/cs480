@@ -30,8 +30,14 @@ public class Lexer {
 		input = new PushbackReader(in);
 	}
 
-	private void skipWhiteSpace() throws ParseException, IOException {
-		// your code here
+	//TODO: look at original, should i really throw IOEXception?
+	//private void skipWhiteSpace() throws ParseException, IOException {
+	private void skipWhiteSpace() throws ParseException {
+		int c = currentChar();
+		while(Character.isWhitespace((char)c)) {
+			c = currentChar();
+		}
+		throwBack(c); //broke outta loop, toss back last char.
 	}
 
 	private int currentChar() throws ParseException {
@@ -45,39 +51,85 @@ public class Lexer {
 		return cc;
 	}
 
-	public void nextLex() throws ParseException {
-		int c = currentChar();
-		token = "";
+	private void throwBack(int c) throws ParseException {
+		if(c != -1) {
+			try {
+				input.unread(c);
+			} catch(IOException e) {
+				throw new ParseException(0);
+			}
+		}
+	}	
 
-		if(Character.isLetterOrDigit((char) c)) {
+	public void nextLex() throws ParseException {
+		int c;
+		token = "";
+		skipWhiteSpace(); //get rid of any preceding whitespaces
+		c = currentChar();
+
+		if((char)c == '{') {
+			while((char)c != '}') {
+				if(c == -1) //we have an unterminated comment
+					throw new ParseException(1);
+				c = currentChar(); //skip comments
+			}
+			c = currentChar();
+			skipWhiteSpace();
+		} 
+
+		if(Character.isLetter((char) c)) {
 			while(Character.isLetterOrDigit((char) c) && !Character.isWhitespace((char)c)) {
 				token = token + (char)c;
 				c = currentChar();
 			}
 
 			if(!Character.isWhitespace((char)c)) {
-				try {
-					input.unread(c);
-				} catch(IOException e) {
-					System.out.println("FUCKER UP OH NOS");
-				}
+				throwBack(c);
 			}
-		} else if(!Character.isWhitespace((char)c)) {
-			token = token + (char)c;
-		} else if(Pattern.matches("\\s", Character.toString((char)c))) {
+		} else if(Character.isDigit((char)c)) {
+			token = token += (char)c;
+			c = currentChar();
+			int num_points = 0;
+			while(Character.isDigit((char)c) || (char)c == '.') {
+				if((char)c == '.')
+					num_points += 1;
+				token += (char)c;
 				c = currentChar();
-			while(Character.isLetterOrDigit((char) c) && Pattern.matches("\\S", Character.toString((char)c))) {
+			}
+			if(num_points == 0)
+				tokenType = intToken;
+			else if(num_points == 1)
+				tokenType = realToken;
+			else
+				throw new ParseException(46);
+			throwBack(c);
+		} else if((char)c == '"') { //TODO: check no comments within comments
+			c = currentChar();
+			while((char)c != '"') {
+				if(c == -1) //unterminated string
+					throw new ParseException(2);
 				token = token + (char)c;
 				c = currentChar();
 			}
+			tokenType = stringToken;
+		} else if((char)c == '<') {
+			token = token + (char)c;
+			c = currentChar();
+			if((char)c == '<' || (char)c == '=') {
+				token = token + (char)c;
+			} else {
+				throwBack(c);
+			}
+			tokenType = 6;
+		} else {
+			token += (char)c;
+			tokenType = 6;
 		}
-
+		
 		if(c == -1) { //end of input, toss to 7 so we can exit
 			tokenType = 7;
 		} else if(Pattern.matches(IDENT_REGEX, token)) {
 			tokenType = 1;
-		} else {
-			tokenType = 6;
 		}
 	}
 
