@@ -138,13 +138,12 @@ public class Lexer {
 				token = token + (char)c;
 				c = currentChar();
 			}
-			if(keywords.containsKey(token)) {
+			if(keywords.containsKey(token)) 
 				tokenType = keywordToken;
-			} else if(Pattern.matches(IDENT_REGEX, token)) {
+			else if(Pattern.matches(IDENT_REGEX, token))
 				tokenType = identifierToken;
-			} else {
+			else 
 				tokenType = otherToken;
-			}
 		}
 		throwBack(c);
 
