@@ -5,6 +5,7 @@
 //		Written by Tim Budd, Winter term 2006
 //
 //		modified by: Cullen King <kingcu@onid.orst.edu>
+//		             Wojtek rajski
 //
 
 import java.io.*;
@@ -23,10 +24,7 @@ public class Lexer {
 
 	private static final String COMMENT_REGEX = "\\{.\\}";
 	private static final String IDENT_REGEX = "[a-zA-Z]+\\w*";
-	private static final String KEYW_REGEX = "";
-	private static final String INT_REGEX = "";
-	private static final String REAL_REGEX = "";
-	private static final String STRING_REGEX = "";
+    private static final String CTL_CHAR_REGEX = "[<>!=]";
 
 	public Lexer(Reader in) {
 		input = new PushbackReader(in);
@@ -119,7 +117,7 @@ public class Lexer {
 				tokenType = realToken;
 		} else if(!Character.isLetterOrDigit((char)c) && c != -1) {
 			token += (char)c;
-			if(Pattern.matches("[<>!=]", Character.toString((char)c))) {
+			if(Pattern.matches(CTL_CHAR_REGEX, Character.toString((char)c))) {
 				int last_c = c;
 				c = currentChar();
 				if((char)c == '=')
