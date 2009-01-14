@@ -43,5 +43,41 @@ public class Parser {
 	}
 
 	// your stuff goes here
+	private void declaration() {
+		if (lex.match("class"))
+			classDeclaration();
+		else
+			nonClassDeclaration();
+		next.nextlex();
+	}
+	
+	private void classDeclaration() {
+		//TODO 
+	}
 
+	private void nonClassDeclaration() {
+		if (lex.match("function"))
+			functionDeclaration();
+		else
+			nonFunctionDeclaration();
+	}
+
+	private void functionDeclaration() {
+		//TODO
+	}
+	
+	private void nonFunctionDeclaration() {
+		if (lex.match("var"))
+			var();
+		else if (lex.match("const"))
+			const();
+		else if (lex.match("type"))
+			type();
+	}
+
+	private void var() {}
+	private void const() {}
+	private void type() {}
+
+	
 }
