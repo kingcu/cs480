@@ -1,0 +1,18 @@
+There were only two changes made to the given grammar to convert to LL(1).
+
+The first was concerning left recursion in the reference production.  This was
+easily solved by converting the single reference production into two seperate
+productions, reference and reference'.
+  
+  reference  =>  identifier reference'
+  reference' =>  ^ | . identifier | [ expression ] | /*nothing*/
+
+The second change occured in the if statement productions.  There was an
+ambiguity, so that given the current token we couldn't predict which branch to
+take.  This was solved with a simple rewrite.
+
+  ifStatement   => if ( expression ) statement elseStatement
+  elseStatement => else statement | /*nothing*/
+
+There appears to be no more recursion or ambiguity in the grammar, so it should
+be acceptable for a recursive descent predictive parser.
