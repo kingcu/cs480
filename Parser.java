@@ -2,6 +2,8 @@
 //	parser skeleton, CS 480, Winter 2006
 //	written by Tim Budd
 //		modified by:
+//		modified by: Cullen King <kingcu@onid.orst.edu>
+//		             Wojtek rajski <rajskiw@onid.orst.edu>
 //
 
 public class Parser {
@@ -95,29 +97,58 @@ public class Parser {
 	
     private void typeDeclaration() throws ParseException {
         start("typeDeclaration");
+        if(!lex.match("type"))
+            throw new ParseException(14);
+        lex.nextLex();
+        nameDeclaration();
         stop("typeDeclaration");
     }
 
     private void variableDeclaration() throws ParseException {
         start("variableDeclaration");
+        if(!lex.match("var")
+            throw new ParseException(15);
+        lex.nextLex();
+        nameDeclaration();
         stop("variableDeclaration");
     }
 
     private void nameDeclaration() throws ParseException {
         start("nameDeclaration");
+        if(!lex.isIdentifier())
+            throw new ParseException(27);
+        lex.nextlex();
+        type();
         stop("nameDeclaration");
     }
 
 
     /* Classes and Functions */
 
-	private void classDeclaration() throws ParseException {
+    private void classDeclaration() throws ParseException {
         start("classDeclaration");
+        if(!lex.match("class"))
+            throw new ParseException(5);
+        lex.nextLex();
+        if(!lex.isIdentifier())
+            throw new ParseException(27);
+        lex.nextLex();
+        classBody();
         stop("classDeclaration");
-	}
+    }
 
     private void classBody() throws ParseException {
         start("classBody");
+        if(!lex.match("begin"))
+            throw new ParseException(4);
+        lex.nextLex();
+        while(!lex.match("end")) {
+            nonClassDeclaration();
+            if(lex.match(";")
+                lex.nextLex();
+            else
+                throw new ParseException(18);
+        }
         stop("classBody");
     }
 
