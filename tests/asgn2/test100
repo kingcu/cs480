@@ -1,0 +1,5 @@
+function main ( ) 
+begin
+	printStr("hello world!");
+	const hehe 100;
+end;
