@@ -48,12 +48,12 @@ public class Parser {
 	private void declaration() throws ParseException {
         start("declaration");
         //classDecleration ends up with terminals {class, function, const, type, var}
-        if(lex.match("class"))
+        if(lex.match("function") || lex.match("const") || lex.match("type") || lex.match("var" || lex.match("class"))) {
             classDeclaration();
-        else if(lex.match("function") || lex.match("const") || lex.match("type") || lex.match("var")) 
             nonClassDeclaration();
-        else
+        } else {
             throw new ParseException(26); //TODO: might not be the correct exceptino
+        }
 		lex.nextLex();
         stop("declaration");
 	}
