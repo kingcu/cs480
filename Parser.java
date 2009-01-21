@@ -63,8 +63,9 @@ public class Parser {
 	
 	private void nonClassDeclaration() throws ParseException {
         start("nonClassDeclaration");
-        if(lex.match("function") || lex.match("var") || lex.match("const") || lex.match("type")) {
+        if(lex.match("function")) {
             functionDeclaration();
+		} else if(lex.match("var") || lex.match("const") || lex.match("type")) {
             nonFunctionDeclaration();
         } else {
             throw new ParseException(26); //TODO: probably not correct exception
@@ -74,13 +75,14 @@ public class Parser {
 
 	private void nonFunctionDeclaration() throws ParseException {
         start("nonFunctionDeclaration");
-        if(lex.match("var") || lex.match("const") || lex.match("type")) {
+        if(lex.match("var"))
             variableDeclaration();
+		else if(lex.match("const"))
             constantDeclaration();
+		else if(lex.match("type"))
             typeDeclaration();
-        } else {
+        else
             throw new ParseException(26); //TODO: probbly wrong exception
-        }
         stop("nonFunctionDeclaration");
 	}
 
@@ -182,20 +184,21 @@ public class Parser {
             throw new ParseException(21);
         lex.nextLex();
         argumentList();
-        if(!lex.match(")"))
-            throw new ParseException(22);
-        lex.nextLex(); //terminal production, so setup next state
+		if(!lex.match(")"))
+			throw new ParseException(22);
+		lex.nextLex();
         stop("arguments");
     }
 
     private void argumentList() throws ParseException {
         start("argumentList");
-        //otherwise we loop over arguments
-        while(!lex.match(")")) {
-            nameDeclaration();
-            if(lex.match(","))
-                lex.nextLex();
-        }
+		if(lex.isIdentifier()) {
+			while(!lex.match(")")) {
+				nameDeclaration();
+				if(lex.match(","))
+					lex.nextLex();
+			}
+		}
         stop("argumentList");
     }
 
@@ -212,7 +215,6 @@ public class Parser {
         start("type");
         if(lex.isIdentifier()) {
             lex.nextLex(); //we are a terminal, so call nextLex to setup next state
-            //TODO: something?
         } else if(lex.match("^")) {
             lex.nextLex();
             type();
@@ -234,10 +236,7 @@ public class Parser {
                 throw new ParseException(24); //should have seen ]
             lex.nextLex();
             type();
-
-        } else {
-            throw new ParseException(30); //TODO: might be the wrong exception...
-        }
+        } 
         stop("type");
     }
 
@@ -266,16 +265,25 @@ public class Parser {
                 throw new ParseException(18);
             lex.nextLex();
         }
+		lex.nextLex();
         stop("compoundStatement");
     }
 
     private void statement() throws ParseException {
         start("statement");
-        returnStatement();
-        ifStatement();
-        whileStatement();
-        compoundStatement();
-        assignOrFunction();
+		if(lex.match("return")) {
+	        returnStatement();
+		} else if(lex.match("if")) {
+	        ifStatement();
+		} else if(lex.match("while")) {
+	        whileStatement();
+		} else if(lex.match("begin")) {
+	        compoundStatement();
+		} else if(lex.isIdentifier()) {
+	        assignOrFunction();
+		} else {
+			throw new ParseException(34); //expecting statement
+		}
         stop("statement");
     }
 
@@ -284,8 +292,13 @@ public class Parser {
         if(!lex.match("return"))
             throw new ParseException(12);
         lex.nextLex();
-        while(!lex.match(";"))  //TODO Check if this is right.
+        if(lex.match("(")) {
+			lex.nextLex();
             expression();
+			if(!lex.match(")"))
+				throw new ParseException(22);
+			lex.nextLex();
+		}
         stop("returnStatement");
     }
 
@@ -302,17 +315,11 @@ public class Parser {
             throw new ParseException(22);
         lex.nextLex();
         statement();
-        lex.nextLex();  //TODO  Check to make sure this works right
-        if(lex.match("else"))
-            expression();
+        if(lex.match("else")) {
+			lex.nextLex();
+            statement();
+		}
         stop("ifStatement");
-    }
-
-    private void elseStatement() throws ParseException {
-        //TODO: this production wasn't in original grammar, so should we log them?
-        // Wojtek "doesn't appear to be needed because it can be covered in ifStatement and there is no reuse value"
-        //start("elseStatement");
-        //stop("elseStatement");
     }
 
     private void whileStatement() throws ParseException {
@@ -334,19 +341,30 @@ public class Parser {
     private void assignOrFunction() throws ParseException {
         start("assignOrFunction");
         reference();
-        lex.nextLex();
-        if(lex.match("="))
+        if(lex.match("=")) {
+			lex.nextLex();
             expression();
-        else
+		} else if(lex.match("(")) {
+			lex.nextLex();
             parameterList();
+			if(!lex.match(")")) {
+				throw new ParseException(22); //expected closeing paren
+			}
+			lex.nextLex();
+		}
         stop("assignOrFunction");
     }
 
     private void parameterList() throws ParseException {
         start("parameterList");
-        expression();
-        //TODO {, expression }
-        //TODO null
+		int tid = lex.tokenCategory();
+		if(lex.match("not") || lex.match("new") || lex.match("(") || lex.match("-") || lex.match("&") || lex.isIdentifier() || tid == Lexer.realToken || tid == Lexer.intToken || tid == Lexer.stringToken) {
+			expression();
+			while(lex.match(",")) {
+				lex.nextLex();
+				expression();
+			}
+		}
         stop("parameterList");
     }
 
@@ -354,54 +372,109 @@ public class Parser {
 
     private void expression() throws ParseException {
         start("expression");
+		relExpression();
+		while(lex.match("and") || lex.match("or")) {
+			lex.nextLex();
+			relExpression();
+		}
         stop("expression");
     }
 
     private void relExpression() throws ParseException {
         start("relExpression");
+		plusExpression();
+		while(lex.match("<") || lex.match("<=") || lex.match("!=") || lex.match("==") || lex.match(">=") || lex.match(">")) {
+			lex.nextLex();
+			plusExpression();
+		}
         stop("relExpression");
     }
 
     private void plusExpression() throws ParseException {
         start("plusExpression");
+		timesExpression();
+		while(lex.match("+") || lex.match("-") || lex.match("<<")) {
+			lex.nextLex();
+			timesExpression();
+		}
         stop("plusExpression");
     }
 
     private void timesExpression() throws ParseException {
         start("timesExpression");
+		term();
+		while(lex.match("*") || lex.match("/") || lex.match("%")) {
+			lex.nextLex();
+			term();
+		}
         stop("timesExpression");
     }
 
     private void term() throws ParseException {
         start("term");
-        expression();
-        if(lex.match("not")) {
+		int tid = lex.tokenCategory();
+
+		if(lex.match("(")) {
+			expression();
+			if(!lex.match(")"))
+				throw new ParseException(22);
+			lex.nextLex();
+		} else if(lex.match("not")) {
             lex.nextLex();
             term();
-        }
-        if(lex.match("new")) {
+        } else if(lex.match("new")) {
             lex.nextLex();
             type();
-        }
-        if(lex.match("-")) {
+        } else if(lex.match("-")) {
             lex.nextLex();
             term();
-        }
-        reference();
-        if(lex.match("&")) {
+        } else if(lex.match("&")) {
             lex.nextLex();
             reference();
-        }
+        } else if(lex.isIdentifier()) {
+			reference();
+			if(lex.match("(")) {
+				lex.nextLex();
+				parameterList();
+				if(!lex.match(")"))
+					throw new ParseException(22);
+				lex.nextLex();
+			}
+		} else if(tid == Lexer.intToken || tid == Lexer.realToken || tid == Lexer.stringToken) {
+			lex.nextLex();
+		}
         //TODO reference (parameterList)
         stop("term");
     }
 
     private void reference() throws ParseException {
         start("reference");
+		if(!lex.isIdentifier()) {
+			throw new ParseException(27); //expected an identifier
+		}
+		lex.nextLex();
+		referencePrime();
         stop("reference");
     }
 
     private void referencePrime() throws ParseException {
         //TODO: should this call start and stop?  probably not...
+		if(lex.match(".")) {
+			lex.nextLex();
+			if(!lex.isIdentifier()) {
+				throw new ParseException(27);
+			}
+			lex.nextLex();
+		} else if(lex.match("[")) {
+			lex.nextLex();
+			expression();
+			if(!lex.match("]")) {
+				throw new ParseException(23); //expected left bracket
+			}
+			lex.nextLex();
+		} else if(lex.match("^")) {
+			//do nothing, since it's just a terminal
+			lex.nextLex();
+		}
     }
 }
