@@ -55,7 +55,7 @@ public class Parser {
         } else if(lex.match("class")) {
             classDeclaration();
         } else {
-            throw new ParseException(26); //TODO: might not be the correct exceptino
+            throw new ParseException(26); //TODO: might not be the correct exception
         }
 		//lex.nextLex();
         stop("declaration");
@@ -79,7 +79,7 @@ public class Parser {
             constantDeclaration();
             typeDeclaration();
         } else {
-            throw new ParseException(26); //TODO: probbly wrony exception
+            throw new ParseException(26); //TODO: probbly wrong exception
         }
         stop("nonFunctionDeclaration");
 	}
@@ -205,7 +205,6 @@ public class Parser {
             lex.nextLex();
             type();
         }
-        //if(lex.match("^") || lex.match("[") || lex.isIdentifier()) {
         stop("returnType");
     }
 
@@ -214,6 +213,9 @@ public class Parser {
         if(lex.isIdentifier()) {
             lex.nextLex(); //we are a terminal, so call nextLex to setup next state
             //TODO: something?
+        } else if(lex.match("^")) {
+            lex.nextLex();
+            type();
         } else if(lex.match("[")) {
             lex.nextLex();
             if(lex.tokenCategory() != Lexer.intToken)
@@ -232,9 +234,7 @@ public class Parser {
                 throw new ParseException(24); //should have seen ]
             lex.nextLex();
             type();
-        } else if(lex.match("^")) {
-            lex.nextLex();
-            type();
+
         } else {
             throw new ParseException(30); //TODO: might be the wrong exception...
         }
