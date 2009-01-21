@@ -236,7 +236,9 @@ public class Parser {
                 throw new ParseException(24); //should have seen ]
             lex.nextLex();
             type();
-        } 
+        } else {
+		   throw new ParseException(30); //we expected a type name
+		}	   
         stop("type");
     }
 
@@ -415,6 +417,7 @@ public class Parser {
 		int tid = lex.tokenCategory();
 
 		if(lex.match("(")) {
+			lex.nextLex();
 			expression();
 			if(!lex.match(")"))
 				throw new ParseException(22);
@@ -442,8 +445,9 @@ public class Parser {
 			}
 		} else if(tid == Lexer.intToken || tid == Lexer.realToken || tid == Lexer.stringToken) {
 			lex.nextLex();
+		} else {
+			throw new ParseException(33); //TODO: is this right?!?!
 		}
-        //TODO reference (parameterList)
         stop("term");
     }
 
