@@ -3,17 +3,22 @@
 //	written by Tim Budd
 //
 //  modified by: Cullen King <kingcu@onid.orst.edu>
-//	             Wojtek rajski <rajskiw@onid.orst.edu>
+//	         Wojtek Rajski <rajskiw@onid.orst.edu>
 //
 
 public class Parser {
 	private Lexer lex;
 	private boolean debug;
+	public final GlobalSymbolTable sym;
 
 	public Parser (Lexer l, boolean d) { lex = l; debug = d; }
 
 	public void parse() throws ParseException {
-		SymbolTable sym = new SymbolTable();
+                sym.enterType("int", PrimitiveType.IntegerType);
+                sym.enterType("real", PrimitiveType.RealType);
+                sym.enterFunction("printInt", new FunctionType(PrimitiveType.VoidType));
+                sym.enterFunction("printReal", new FunctionType(PrimitiveType.VoidType));
+                sym.enterFunction("printStr", new FunctionType(PrimitiveType.VoidType));
 		lex.nextLex();
 		program(sym);
 		if (lex.tokenCategory() != lex.endOfInput)
@@ -37,7 +42,6 @@ public class Parser {
 
 	private void program(SymbolTable sym) throws ParseException {
 		start("program");
-
 		while(lex.tokenCategory() != Lexer.endOfInput) {
 			declaration(sym);
 			if(lex.match(";"))
@@ -101,6 +105,10 @@ public class Parser {
         int tid = lex.tokenCategory();
         if(tid != Lexer.stringToken || tid != Lexer.realToken || tid != Lexer.intToken)
             throw new ParseException(31);
+        lex.nextLex();
+        if(sym.findSymbol(lex.tokenText()) != null)
+		throw new ParseException(35, lex.tokenText());
+        //TODO enterConstant
         stop("constantDeclaration");
     }
 	
@@ -113,6 +121,8 @@ public class Parser {
         if(!lex.match(":"))
             throw new ParseException(19); //need a colon between identifier and type
         lex.nextLex();
+        if(sym.findSymbol(lex.tokenText()) != null)
+		throw new ParseException(35, lex.tokenText());
         type(sym);
         stop("nameDeclaration");
 //        if(!lex.match("type"))
@@ -212,44 +222,53 @@ public class Parser {
         stop("argumentList");
     }
 
-    private void returnType(SymbolTable sym) throws ParseException {
+    private type returnType(SymbolTable sym) throws ParseException {
         start("returnType");
         if(lex.match(":")) {
             lex.nextLex();
-            type(sym);
+            return type(sym);
         }
         stop("returnType");
+        return PrimitiveType.VoidType
     }
 
-    private void type(SymbolTable sym) throws ParseException {
+    private Type type(SymbolTable sym) throws ParseException {
         start("type");
+        Type result = null;
         if(lex.isIdentifier()) {
+            result = sym.lookupType(lex.tokenText());
             lex.nextLex(); //we are a terminal, so call nextLex to setup next state
         } else if(lex.match("^")) {
             lex.nextLex();
-            type(sym);
+            result = new PointerType(type(sym));
         } else if(lex.match("[")) {
             lex.nextLex();
             if(lex.tokenCategory() != Lexer.intToken)
                 throw new ParseException(32); //expected an integer
+            int lower = (new Integer(lex.tokenText()).intValue());
             lex.nextLex();
 
             if(!lex.match(":"))
-                throw new ParseException(19); //needed to see :
+                throw new ParseException(19); //needed to see :        if(sym.findSymbol(lex.tokenText()) != null)
+		throw new ParseException(35, lex.tokenText());
             lex.nextLex();
 
             if(lex.tokenCategory() != Lexer.intToken)
                 throw new ParseException(32); //expected an integer
+            int upper = (new Integer(lex.tokenText()).intValue());
             lex.nextLex();
 
             if(!lex.match("]"))
                 throw new ParseException(24); //should have seen ]
             lex.nextLex();
-            type(sym);
+            result = lex.tokenText();  //TODO this right?
+            result = new ArrayType(lower, upper, result);
+            //type(sym);
         } else {
 		   throw new ParseException(30); //we expected a type name
 		}	   
         stop("type");
+        return result;
     }
 
     private void functionBody(SymbolTable sym) throws ParseException {
