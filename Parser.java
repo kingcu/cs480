@@ -9,16 +9,17 @@
 public class Parser {
 	private Lexer lex;
 	private boolean debug;
-	public final GlobalSymbolTable sym;
+	private GlobalSymbolTable sym;
 
 	public Parser (Lexer l, boolean d) { lex = l; debug = d; }
 
 	public void parse() throws ParseException {
-                sym.enterType("int", PrimitiveType.IntegerType);
-                sym.enterType("real", PrimitiveType.RealType);
-                sym.enterFunction("printInt", new FunctionType(PrimitiveType.VoidType));
-                sym.enterFunction("printReal", new FunctionType(PrimitiveType.VoidType));
-                sym.enterFunction("printStr", new FunctionType(PrimitiveType.VoidType));
+		sym = new GlobalSymbolTable();
+		sym.enterType("int", PrimitiveType.IntegerType);
+		sym.enterType("real", PrimitiveType.RealType);
+		sym.enterFunction("printInt", new FunctionType(PrimitiveType.VoidType));
+		sym.enterFunction("printReal", new FunctionType(PrimitiveType.VoidType));
+		sym.enterFunction("printStr", new FunctionType(PrimitiveType.VoidType));
 		lex.nextLex();
 		program(sym);
 		if (lex.tokenCategory() != lex.endOfInput)
@@ -106,14 +107,19 @@ public class Parser {
         if(tid != Lexer.stringToken || tid != Lexer.realToken || tid != Lexer.intToken)
             throw new ParseException(31);
         lex.nextLex();
-        if(sym.findSymbol(lex.tokenText()) != null)
-		throw new ParseException(35, lex.tokenText());
+        if(sym.nameDefined(lex.tokenText()))
+			throw new ParseException(35, lex.tokenText());
         //TODO enterConstant
         stop("constantDeclaration");
     }
 	
     private void typeDeclaration(SymbolTable sym) throws ParseException {
         start("typeDeclaration");
+        if(!lex.match("type"))
+            throw new ParseException(14);
+        lex.nextLex();
+
+		//Instead of calling nameDeclaration, put body of it inline
         start("nameDeclaration");
         if(!lex.isIdentifier())  // TODO do we have to save the identifier?
             throw new ParseException(27);
@@ -121,14 +127,9 @@ public class Parser {
         if(!lex.match(":"))
             throw new ParseException(19); //need a colon between identifier and type
         lex.nextLex();
-        if(sym.findSymbol(lex.tokenText()) != null)
-		throw new ParseException(35, lex.tokenText());
         type(sym);
-        stop("nameDeclaration");
-//        if(!lex.match("type"))
-//            throw new ParseException(14);
-//        lex.nextLex();
-//        nameDeclaration();
+		stop("nameDeclaration");
+
         stop("typeDeclaration");
     }
 
@@ -222,19 +223,20 @@ public class Parser {
         stop("argumentList");
     }
 
-    private type returnType(SymbolTable sym) throws ParseException {
+    private Type returnType(SymbolTable sym) throws ParseException {
         start("returnType");
         if(lex.match(":")) {
             lex.nextLex();
             return type(sym);
         }
         stop("returnType");
-        return PrimitiveType.VoidType
+        return PrimitiveType.VoidType;
     }
 
     private Type type(SymbolTable sym) throws ParseException {
         start("type");
         Type result = null;
+
         if(lex.isIdentifier()) {
             result = sym.lookupType(lex.tokenText());
             lex.nextLex(); //we are a terminal, so call nextLex to setup next state
@@ -249,8 +251,7 @@ public class Parser {
             lex.nextLex();
 
             if(!lex.match(":"))
-                throw new ParseException(19); //needed to see :        if(sym.findSymbol(lex.tokenText()) != null)
-		throw new ParseException(35, lex.tokenText());
+                throw new ParseException(19); //needed to see :
             lex.nextLex();
 
             if(lex.tokenCategory() != Lexer.intToken)
@@ -261,9 +262,12 @@ public class Parser {
             if(!lex.match("]"))
                 throw new ParseException(24); //should have seen ]
             lex.nextLex();
-            result = lex.tokenText();  //TODO this right?
+
+			result = sym.lookupType(lex.tokenText());
+            //type(sym); //might use this instead of nextLex();
+			//gotta advance so we are at next token
+			lex.nextLex();
             result = new ArrayType(lower, upper, result);
-            //type(sym);
         } else {
 		   throw new ParseException(30); //we expected a type name
 		}	   
@@ -274,7 +278,10 @@ public class Parser {
     private void functionBody(SymbolTable sym) throws ParseException {
         start("functionBody");
         while(!lex.match("begin")) {
-            nonClassDeclaration(sym);
+            //nonClassDeclaration(sym);
+			//don't want nested functions, so we call nonFunctionDeclaration directly,
+			//since nonClassDeclaration called just function and nonFunctionDeclaration.
+			nonFunctionDeclaration(sym);
             if(!lex.match(";"))
                 throw new ParseException(18); //expecting semicolon
             lex.nextLex();
