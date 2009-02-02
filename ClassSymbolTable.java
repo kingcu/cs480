@@ -19,6 +19,7 @@ class ClassSymbolTable implements SymbolTable {
 	public void enterVariable (String name, Type type)
 		{ 
 			// TODO: again, you need to do something different here.
+                if (!nameDefined(name))
 			enterSymbol(new OffsetSymbol(name, new AddressType(type), 27));
 		}
 
@@ -77,5 +78,7 @@ class ClassSymbolTable implements SymbolTable {
 
 	public int size() {
 		//TODO: return total size of data fields in class symbol table
+                // Does this need to be size in bytes?
+                return table.size();
 	}
 }
