@@ -21,7 +21,8 @@ class FunctionSymbolTable implements SymbolTable {
 		// TODO: this is for you to figure out.
 		// I'll leave a stub, which you should
 		// replace with the real thing
-		enterSymbol(new OffsetSymbol(name, new AddressType(type), 27));
+                if (!nameDefined(name))
+		    enterSymbol(new OffsetSymbol(name, new AddressType(type), 27));
 	}
 
 	public void enterFunction (String name, FunctionType ft) 
@@ -88,5 +89,6 @@ class FunctionSymbolTable implements SymbolTable {
 
 	public int size() {
 		//TODO: implement size as according to assignment specification
+                return table.size();
 	} 
 }
