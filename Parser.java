@@ -1,7 +1,8 @@
 //
 //	parser skeleton, CS 480/580, Winter 2001
 //	written by Tim Budd
-//		modified by:
+//		modified by: 	Cullen King <kingcu@onid.orst.edu>
+//				Wojtek Rajski <rajskiw@onid.orst.edu>
 //
 
 public class Parser {
@@ -109,14 +110,14 @@ public class Parser {
 				parseError(20);
 			lex.nextLex();
 			if (lex.tokenCategory() == lex.intToken)
-				;
+				sym.enterConstant(constName, new IntegerNode(new Integer(lex.tokenText())));
 			else if (lex.tokenCategory() == lex.realToken)
-				;
+				sym.enterConstant(constName, new RealNode(new Real(lex.tokenText())));;
 			else if (lex.tokenCategory() == lex.stringToken)
-				;
+				sym.enterConstant(constName, new StringNode(new String(lex.tokenText())));;
 			else
 				parseError(31);
-			sym.enterConstant(constName, new IntegerNode(new Integer(lex.tokenText())));
+			//sym.enterConstant(constName, new IntegerNode(new Integer(lex.tokenText())));
 			lex.nextLex();
 		}
 		else
@@ -578,7 +579,7 @@ public class Parser {
 		while (lex.match("^") || lex.match(".") || lex.match("[")) {
 			if (lex.match("^")) {
 				b = addressBaseType(result.type);
-				if ( !(b instanceof PointerType) )
+				if (!(b instanceof PointerType) )
 					parseError(38);
 				pb = (PointerType) b;
 				result = new UnaryNode(UnaryNode.dereference,
@@ -593,7 +594,7 @@ public class Parser {
 					parseError(37);
 
 				lex.nextLex();
-				if (! lex.isIdentifier())
+				if (!lex.isIdentifier())
 					parseError(27);
 				result = sym.lookupName(result, lex.tokenText());
 				lex.nextLex();
@@ -601,7 +602,23 @@ public class Parser {
 			else {
 				lex.nextLex();
 				expression(sym);
-				if (! lex.match("]"))
+				Ast indexExpression = new IntegerNode(42);
+				b = addressBaseType(result.type);
+				if(!(b instanceof ArrayType))
+					parseError(40);
+				if (!indexExpression.type.equals(PrimitiveType.IntegerType))
+					parseError(41);
+				indexExpression = new BinaryNode( BinaryNode.minus,
+					PrimitiveType.IntegerType,
+					indexExpression, new IntegerNode(at.lowerBound));
+				indexExpression = new BinaryNode( BinaryNode.times,
+					PrimitiveType.IntegerType,
+					indexExpression, new IntegerNode(at.elementSize));  //TODO at.elementSize ?? not sure if thats right.
+				//TODO add to the reference part, to form th address of the designated element
+				//indexExpression = new BinaryNode( BinaryNode.plus,
+				//	Type,
+				//	indexExpression, new IntegerNode(at.
+				if (!lex.match("]"))
 					parseError(24);
 				lex.nextLex();
 			}
