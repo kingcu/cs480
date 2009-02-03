@@ -73,7 +73,9 @@ public class Parser {
 		 functionDeclaration(sym);
 		 else 
 		 */
-		if(lex.match("const") || lex.match("var") 
+		if(lex.match("function"))
+			functionDeclaration(sym);
+		else if(lex.match("const") || lex.match("var") 
 				|| lex.match("type"))
 			nonFunctionDeclaration(sym);
 		else
@@ -100,21 +102,21 @@ public class Parser {
 
 		if (lex.match("const")) {
 			lex.nextLex();
-			if (! lex.isIdentifier())
+			if(! lex.isIdentifier())
 				parseError(27);
 			constName = lex.tokenText();
 			if(sym.nameDefined(constName))
 				throw new ParseException(35, constName);
 			lex.nextLex();
-			if (! lex.match("="))
+			if(! lex.match("="))
 				parseError(20);
 			lex.nextLex();
-			if (lex.tokenCategory() == lex.intToken)
+			if(lex.tokenCategory() == lex.intToken)
 				sym.enterConstant(constName, new IntegerNode(new Integer(lex.tokenText())));
-			else if (lex.tokenCategory() == lex.realToken)
-				sym.enterConstant(constName, new RealNode(new Real(lex.tokenText())));;
-			else if (lex.tokenCategory() == lex.stringToken)
-				sym.enterConstant(constName, new StringNode(new String(lex.tokenText())));;
+			else if(lex.tokenCategory() == lex.realToken)
+				sym.enterConstant(constName, new RealNode(new Double(lex.tokenText())));
+			else if(lex.tokenCategory() == lex.stringToken)
+				sym.enterConstant(constName, new StringNode(new String(lex.tokenText())));
 			else
 				parseError(31);
 			//sym.enterConstant(constName, new IntegerNode(new Integer(lex.tokenText())));
@@ -196,7 +198,7 @@ public class Parser {
 		className = lex.tokenText();
 		if(sym.nameDefined(className))
 			throw new ParseException(35, className);
-		sym.enterType(className, new ClassType(sym));
+		sym.enterType(className, new ClassType(classSym));
 
 		lex.nextLex();
 		classBody(classSym);
@@ -236,7 +238,7 @@ public class Parser {
 		funSym.enteringParameters(true);
 		arguments(funSym);
 		funSym.enteringParameters(false);
-		sym.enterFunction(funName, new FunctionType(returnType(sym)));
+		sym.enterFunction(funName, new FunctionType(returnType(funSym)));
 		functionBody(funSym, funName);
 		stop("functionDeclaration");
 	}
@@ -437,7 +439,8 @@ public class Parser {
 
 	private void assignOrFunction (SymbolTable sym) throws ParseException {
 		start("assignOrFunction");
-		reference(sym);
+		Ast val = reference(sym);
+		val.genCode();
 		if (lex.match("=")) {
 			lex.nextLex();
 			expression(sym);
@@ -537,7 +540,8 @@ public class Parser {
 		}
 		else if (lex.match("&")) {
 			lex.nextLex();
-			reference(sym);
+			Ast val = reference(sym);
+			val.genCode();
 		}
 		else if (lex.tokenCategory() == lex.intToken) {
 			lex.nextLex();
@@ -549,7 +553,8 @@ public class Parser {
 			lex.nextLex();
 		}
 		else if (lex.isIdentifier()) {
-			reference(sym);
+			Ast val = reference(sym);
+			val.genCode();
 			if (lex.match("(")) {
 				lex.nextLex();
 				parameterList(sym);
@@ -590,13 +595,18 @@ public class Parser {
 				b = addressBaseType(result.type);
 				if(!(b instanceof ClassType))
 					parseError(39);
+				ClassType ct = (ClassType)b;
+
 				if(!sym.nameDefined(refName))
 					parseError(37);
 
 				lex.nextLex();
 				if (!lex.isIdentifier())
 					parseError(27);
-				result = sym.lookupName(result, lex.tokenText());
+
+				if(!ct.symbolTable.nameDefined(lex.tokenText()))
+					parseError(29);
+				result = ct.symbolTable.lookupName(result, lex.tokenText());
 				lex.nextLex();
 			}
 			else {
@@ -606,18 +616,23 @@ public class Parser {
 				b = addressBaseType(result.type);
 				if(!(b instanceof ArrayType))
 					parseError(40);
+				ArrayType at = (ArrayType)b;
 				if (!indexExpression.type.equals(PrimitiveType.IntegerType))
 					parseError(41);
-				indexExpression = new BinaryNode( BinaryNode.minus,
-					PrimitiveType.IntegerType,
-					indexExpression, new IntegerNode(at.lowerBound));
-				indexExpression = new BinaryNode( BinaryNode.times,
-					PrimitiveType.IntegerType,
-					indexExpression, new IntegerNode(at.elementSize));  //TODO at.elementSize ?? not sure if thats right.
-				//TODO add to the reference part, to form th address of the designated element
-				//indexExpression = new BinaryNode( BinaryNode.plus,
-				//	Type,
-				//	indexExpression, new IntegerNode(at.
+				indexExpression = new BinaryNode(BinaryNode.minus,
+						PrimitiveType.IntegerType,
+						indexExpression, new IntegerNode(at.lowerBound));
+				indexExpression = new BinaryNode(BinaryNode.times,
+						PrimitiveType.IntegerType,
+						indexExpression, new IntegerNode(at.size()));
+
+				//ok so now we finally add the reference node with the node we
+				//have been creating, to yield a final node with an address...
+				result = new BinaryNode(BinaryNode.plus,
+						PrimitiveType.IntegerType,
+						indexExpression, result);
+
+
 				if (!lex.match("]"))
 					parseError(24);
 				lex.nextLex();

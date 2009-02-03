@@ -10,7 +10,7 @@ class FunctionSymbolTable implements SymbolTable {
 	private ArrayList params = new ArrayList(2); //initial cap of 2...most of my functions have <= 2
 	private int offsetCount = 0;
 	private int paramOffsetCount = 8;
-	public boolean doingArguments = true;
+	public boolean doingArguments = false;
 	SymbolTable surrounding = null;
 
 	FunctionSymbolTable (SymbolTable st) { surrounding = st; }
@@ -29,9 +29,9 @@ class FunctionSymbolTable implements SymbolTable {
 			offsetCount += type.size();
 		} else {
 			OffsetSymbol blurg  = new OffsetSymbol(name, new AddressType(type), paramOffsetCount);
+			paramOffsetCount += type.size();
 			enterSymbol(blurg);
 			params.add(blurg);
-			paramOffsetCount += type.size();
 		}
 	}
 

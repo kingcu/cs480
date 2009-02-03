@@ -50,7 +50,7 @@ class GlobalSymbolTable implements SymbolTable {
 			   throw new ParseException(30);
 		   }
 		} else {
-			throw new ParseException(42);
+			throw new ParseException(42, name);
 		}
 	}
 
