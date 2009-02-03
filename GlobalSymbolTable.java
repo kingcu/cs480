@@ -38,19 +38,26 @@ class GlobalSymbolTable implements SymbolTable {
 		else return false;
 	}
 
+	//TODO: i modified from original to meet ParseExceptions thrown specified in
+	//assignment description...not sure if this was necessary?
 	public Type lookupType(String name) throws ParseException {
 		Symbol s = findSymbol(name);
-		if ((s != null) && (s instanceof TypeSymbol)) {
-			TypeSymbol ts = (TypeSymbol) s;
-			return ts.type;
+		if(s != null) {
+		   if(s instanceof TypeSymbol) {
+				TypeSymbol ts = (TypeSymbol) s;
+				return ts.type;
+		   } else {
+			   throw new ParseException(30);
+		   }
+		} else {
+			throw new ParseException(42);
 		}
-		throw new ParseException(30);
 	}
 
 	public Ast lookupName(Ast base, String name) throws ParseException {
 		Symbol s = findSymbol(name);
 		if (s == null)
-			throw new ParseException(41, name);
+			throw new ParseException(42, name);
 		// now have a valid symbol
 		if (s instanceof GlobalSymbol) {
 			GlobalSymbol gs = (GlobalSymbol) s;

@@ -7,6 +7,7 @@ import java.util.Hashtable;
 class ClassSymbolTable implements SymbolTable {
 	private SymbolTable surround = null;
 	private Hashtable table = new Hashtable(); //let it grow automatically
+	private int offsetCount = 0;
 
 	ClassSymbolTable (SymbolTable s) { surround = s; }
 
@@ -16,12 +17,10 @@ class ClassSymbolTable implements SymbolTable {
 	public void enterType (String name, Type type) 
 		{ enterSymbol (new TypeSymbol(name, type)); }
 
-	public void enterVariable (String name, Type type)
-		{ 
-			// TODO: again, you need to do something different here.
-                if (!nameDefined(name))
-			enterSymbol(new OffsetSymbol(name, new AddressType(type), 27));
-		}
+	public void enterVariable (String name, Type type) {
+		enterSymbol(new OffsetSymbol(name, new AddressType(type), offsetCount));
+		offsetCount += type.size();
+	}
 
 	public void enterFunction (String name, FunctionType ft) 
 		// this should really be different as well,
@@ -46,12 +45,13 @@ class ClassSymbolTable implements SymbolTable {
 		else return false;
 	}
 
+	//TODO: might need to implement exceptions, as defined in assignment...
 	public Type lookupType (String name) throws ParseException {
 		Symbol s = findSymbol(name);
 		if ((s != null) && (s instanceof TypeSymbol)) {
 			TypeSymbol ts = (TypeSymbol) s;
 			return ts.type;
-			}
+		}
 		return surround.lookupType(name);
 	}
 
@@ -78,7 +78,6 @@ class ClassSymbolTable implements SymbolTable {
 
 	public int size() {
 		//TODO: return total size of data fields in class symbol table
-                // Does this need to be size in bytes?
-                return table.size();
+		return offsetCount;
 	}
 }

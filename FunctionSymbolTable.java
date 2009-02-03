@@ -3,9 +3,14 @@
 //
 
 import java.util.Hashtable;
+import java.util.ArrayList;
 
 class FunctionSymbolTable implements SymbolTable {
 	private Hashtable table = new Hashtable(); //let it grow automatically
+	private ArrayList params = new ArrayList(2); //initial cap of 2...most of my functions have <= 2
+	private int offsetCount = 0;
+	private int paramOffsetCount = 8;
+	public boolean doingArguments = true;
 	SymbolTable surrounding = null;
 
 	FunctionSymbolTable (SymbolTable st) { surrounding = st; }
@@ -18,21 +23,24 @@ class FunctionSymbolTable implements SymbolTable {
 
 	public void enterVariable (String name, Type type)
 	{
-		// TODO: this is for you to figure out.
-		// I'll leave a stub, which you should
-		// replace with the real thing
-                if (!nameDefined(name))
-		    enterSymbol(new OffsetSymbol(name, new AddressType(type), 27));
+		//TODO: I believe using negative for regular offsets is right, unless I am confused...
+		if(doingArguments == false) {
+			enterSymbol(new OffsetSymbol(name, new AddressType(type), -offsetCount));
+			offsetCount += type.size();
+		} else {
+			OffsetSymbol blurg  = new OffsetSymbol(name, new AddressType(type), paramOffsetCount);
+			enterSymbol(blurg);
+			params.add(blurg);
+			paramOffsetCount += type.size();
+		}
 	}
 
 	public void enterFunction (String name, FunctionType ft) 
 		{ enterSymbol (new GlobalSymbol(name, ft, name)); }
 
 	public void enteringParameters(boolean flag) {
+		doingArguments = (flag == true);
 	}
-
-
-	public boolean doingArguments = true;
 
 	private void enterSymbol (Symbol s) {
 		table.put(s.name, s);
@@ -52,18 +60,21 @@ class FunctionSymbolTable implements SymbolTable {
 		else return false;
 	}
 
+	//TODO: implement exceptions like defined in assignment?
 	public Type lookupType (String name) throws ParseException {
 		Symbol s = findSymbol(name);
 		if ((s != null) && (s instanceof TypeSymbol)) {
 			TypeSymbol ts = (TypeSymbol) s;
 			return ts.type;
-			}
+		}
 		// note how we check the surrounding scopes
 		return surrounding.lookupType(name);
 	}
 
+	//TODO: might want to implement some error handling...
 	public Type parameterType(int index) {
-		//TODO: implement!
+		OffsetSymbol blech = (OffsetSymbol)params.get(index);
+		return blech.type;
 	}
 
 	public Ast lookupName (Ast base, String name) throws ParseException {
@@ -88,7 +99,6 @@ class FunctionSymbolTable implements SymbolTable {
 	}
 
 	public int size() {
-		//TODO: implement size as according to assignment specification
-                return table.size();
+		return offsetCount;
 	} 
 }
