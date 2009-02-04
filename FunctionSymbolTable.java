@@ -25,8 +25,8 @@ class FunctionSymbolTable implements SymbolTable {
 	{
 		//TODO: I believe using negative for regular offsets is right, unless I am confused...
 		if(doingArguments == false) {
-			enterSymbol(new OffsetSymbol(name, new AddressType(type), -offsetCount));
 			offsetCount += type.size();
+			enterSymbol(new OffsetSymbol(name, new AddressType(type), -offsetCount));
 		} else {
 			OffsetSymbol blurg  = new OffsetSymbol(name, new AddressType(type), paramOffsetCount);
 			paramOffsetCount += type.size();
@@ -39,7 +39,7 @@ class FunctionSymbolTable implements SymbolTable {
 		{ enterSymbol (new GlobalSymbol(name, ft, name)); }
 
 	public void enteringParameters(boolean flag) {
-		doingArguments = (flag == true);
+		doingArguments = flag;
 	}
 
 	private void enterSymbol (Symbol s) {
@@ -60,7 +60,6 @@ class FunctionSymbolTable implements SymbolTable {
 		else return false;
 	}
 
-	//TODO: implement exceptions like defined in assignment?
 	public Type lookupType (String name) throws ParseException {
 		Symbol s = findSymbol(name);
 		if ((s != null) && (s instanceof TypeSymbol)) {

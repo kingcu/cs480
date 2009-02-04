@@ -119,7 +119,6 @@ public class Parser {
 				sym.enterConstant(constName, new StringNode(new String(lex.tokenText())));
 			else
 				parseError(31);
-			//sym.enterConstant(constName, new IntegerNode(new Integer(lex.tokenText())));
 			lex.nextLex();
 		}
 		else
@@ -133,7 +132,6 @@ public class Parser {
 
 		if (lex.match("type")) {
 			lex.nextLex();
-			//nameDeclaration(sym);
 
 			start("nameDeclaration");
 			if (! lex.isIdentifier()) 
@@ -147,7 +145,6 @@ public class Parser {
 			if (! lex.match(":"))
 				parseError(19);
 			lex.nextLex();
-			
 			sym.enterType(typeName, type(sym));
 
 			stop("nameDeclaration");
@@ -172,7 +169,7 @@ public class Parser {
 		start("nameDeclaration");
 		String nameName;
 
-		if (! lex.isIdentifier()) 
+		if (!lex.isIdentifier()) 
 			parseError(27);
 		nameName = lex.tokenText();
 		if(sym.nameDefined(nameName))
@@ -190,10 +187,10 @@ public class Parser {
 		String className;
 		ClassSymbolTable classSym = new ClassSymbolTable(sym);
 
-		if (! lex.match("class"))
+		if (!lex.match("class"))
 			parseError(5);
 		lex.nextLex();
-		if (! lex.isIdentifier())
+		if (!lex.isIdentifier())
 			parseError(27);
 		className = lex.tokenText();
 		if(sym.nameDefined(className))
@@ -310,8 +307,6 @@ public class Parser {
 			lex.nextLex();
 
 			result = sym.lookupType(lex.tokenText());
-			//should i call type() like original, or just nextLex?
-			//type(sym);
 			lex.nextLex();
 			result = new ArrayType(lower, upper, result);
 		} else {
@@ -540,8 +535,7 @@ public class Parser {
 		}
 		else if (lex.match("&")) {
 			lex.nextLex();
-			Ast val = reference(sym);
-			val.genCode();
+			reference(sym);
 		}
 		else if (lex.tokenCategory() == lex.intToken) {
 			lex.nextLex();
@@ -624,14 +618,13 @@ public class Parser {
 						indexExpression, new IntegerNode(at.lowerBound));
 				indexExpression = new BinaryNode(BinaryNode.times,
 						PrimitiveType.IntegerType,
-						indexExpression, new IntegerNode(at.size()));
+						indexExpression, new IntegerNode(at.elementType.size()));
 
 				//ok so now we finally add the reference node with the node we
 				//have been creating, to yield a final node with an address...
 				result = new BinaryNode(BinaryNode.plus,
-						PrimitiveType.IntegerType,
-						indexExpression, result);
-
+						new AddressType(at.elementType),
+						result, indexExpression);
 
 				if (!lex.match("]"))
 					parseError(24);
