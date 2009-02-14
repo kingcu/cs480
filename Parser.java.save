@@ -1,7 +1,8 @@
 //
 //	parser skeleton, CS 480/580, Winter 1998
 //	written by Tim Budd
-//		modified by:
+//		modified by:	Cullen King
+//				Wojtek Rajski
 //
 
 public class Parser {
@@ -402,7 +403,7 @@ public class Parser {
 
 	private void assignOrFunction (SymbolTable sym) throws ParseException {
 		start("assignOrFunction");
-		Ast val = reference(sym);
+		Ast val = reference
 		if (lex.match("=")) {
 			lex.nextLex();
 			expression(sym);
@@ -430,32 +431,15 @@ public class Parser {
 			}
 		stop("parameterList");
 		}
-		
-	private boolean MustBeBoolean (Ast value) throws ParseException {
-		if (value.type == PrimitiveType.BooleanType)
-			return true;
-		parseError(43);
-		return false;
-		}
 
-	private Ast expression (SymbolTable sym) throws ParseException {
-		Ast result = null;
+	private void expression (SymbolTable sym) throws ParseException {
 		start("expression");
-		Ast argument1 = relExpression(sym);
+		relExpression(sym);
 		while (lex.match("and") || lex.match("or")) {
 			lex.nextLex();
-			Ast argument2 = relExpression(sym);
-			if (MustBeBoolean (argument1) && MustBeBoolean (argument2)){
-				if (lex.match("and"))
-					result = new BinaryNode(BinaryNode.and,
-							PrimitiveType.BooleanType, argument1, argument2);
-				else if (lex.match("or"))
-					result = new BinaryNode(BinaryNode.or,
-							PrimitiveType.BooleanType, argument1, argument2);
-				}
+			relExpression(sym);
 			}
 		stop("expression");
-		return null;
 		}
 
 	private boolean relOp() {
@@ -466,7 +450,7 @@ public class Parser {
 		return false;
 		}
 
-	private Ast relExpression (SymbolTable sym) throws ParseException {
+	private void relExpression (SymbolTable sym) throws ParseException {
 		start("relExpression");
 		plusExpression(sym);
 		if (relOp()) {
@@ -474,10 +458,9 @@ public class Parser {
 			plusExpression(sym);
 			}
 		stop("relExpression");
-		return null;
 		}
 
-	private Ast plusExpression (SymbolTable sym) throws ParseException {
+	private void plusExpression (SymbolTable sym) throws ParseException {
 		start("plusExpression");
 		timesExpression(sym);
 		while (lex.match("+") || lex.match("-") || lex.match("<<")) {
@@ -485,10 +468,9 @@ public class Parser {
 			timesExpression(sym);
 			}
 		stop("plusExpression");
-		return null;
 		}
 
-	private Ast timesExpression (SymbolTable sym) throws ParseException {
+	private void timesExpression (SymbolTable sym) throws ParseException {
 		start("timesExpression");
 		term(sym);
 		while (lex.match("*") || lex.match("/") || lex.match("%")) {
@@ -496,10 +478,9 @@ public class Parser {
 			term(sym);
 			}
 		stop("timesExpression");
-		return null;
 		}
 
-	private Ast term (SymbolTable sym) throws ParseException {
+	private void term (SymbolTable sym) throws ParseException {
 		start("term");
 		if (lex.match("(")) {
 			lex.nextLex();
@@ -535,6 +516,7 @@ public class Parser {
 			}
 		else if (lex.isIdentifier()) {
 			Ast val = reference(sym);
+			val.genCode();
 			if (lex.match("(")) {
 				lex.nextLex();
 				parameterList(sym);
@@ -546,7 +528,6 @@ public class Parser {
 		else
 			parseError(33);
 		stop("term");
-		return null;
 		}
 
 	private Type addressBaseType(Type t) throws ParseException {
@@ -588,7 +569,8 @@ public class Parser {
 				}
 			else {
 				lex.nextLex();
-				Ast indexExpression = expression(sym);
+				expression(sym);
+				Ast indexExpression = new IntegerNode(42);
 				Type b = addressBaseType(result.type);
 				if ( !(b instanceof ArrayType) )
 					parseError(40);
