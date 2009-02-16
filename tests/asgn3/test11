@@ -1,0 +1,36 @@
+const max = 4;
+type ary : [ 2 : 5 ] int;
+
+class foo
+begin
+	const max = 7;
+	var y : int;
+	var z : real;
+	const j = "hahaha"; {this is a quote}
+
+	function routine():int
+	var a : ary;
+	begin
+		z = 10.1;
+		a[2] = 10;
+		printStr(j);
+		return a[2];
+	end;
+		
+end;
+
+function main ()
+var q : foo;
+begin
+	if(q.max > 7)
+		q.z = 3.9;
+	if(q.z < 4)
+		q.y = 10;
+	if(q.y < 5)
+		q.y = 5;
+	else
+		q.z = 20.0;
+	q.z = 3.4;
+
+	q.routine();
+end;
