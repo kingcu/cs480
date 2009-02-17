@@ -439,23 +439,22 @@ public class Parser {
 		}
 
 	private Ast expression (SymbolTable sym) throws ParseException {
-		Ast result = null;
 		start("expression");
-		Ast argument1 = relExpression(sym);
+		Ast result = relExpression(sym);
 		while (lex.match("and") || lex.match("or")) {
 			lex.nextLex();
 			Ast argument2 = relExpression(sym);
-			if (MustBeBoolean (argument1) && MustBeBoolean (argument2)){
+			if (MustBeBoolean (result) && MustBeBoolean (argument2)){
 				if (lex.match("and"))
 					result = new BinaryNode(BinaryNode.and,
-							PrimitiveType.BooleanType, argument1, argument2);
+							PrimitiveType.BooleanType, result, argument2);
 				else if (lex.match("or"))
 					result = new BinaryNode(BinaryNode.or,
-							PrimitiveType.BooleanType, argument1, argument2);
+							PrimitiveType.BooleanType, result, argument2);
 				}
 			}
 		stop("expression");
-		return null;
+		return result;
 		}
 
 	private boolean relOp() {
@@ -468,72 +467,190 @@ public class Parser {
 
 	private Ast relExpression (SymbolTable sym) throws ParseException {
 		start("relExpression");
-		plusExpression(sym);
+		Ast left = plusExpression(sym);
+		Ast right = null;
+		Ast result = null;
+		String op = null;
+		int nodeType = 0;
 		if (relOp()) {
+			op = lex.tokenText();
 			lex.nextLex();
-			plusExpression(sym);
-			}
-		stop("relExpression");
-		return null;
+			right = plusExpression(sym);
+			if(left.type == right.type) {
+				if(op.equals(">")) {
+					nodeType = BinaryNode.greater;
+				} else if(op.equals("<")) {
+					nodeType = BinaryNode.less;
+				} else if(op.equals("==")) {
+					nodeType = BinaryNode.equal;
+				} else if(op.equals("<=")) {
+					nodeType = BinaryNode.lessEqual;
+				} else if(op.equals(">=")) {
+					nodeType = BinaryNode.greaterEqual;
+				} else if(op.equals("!=")) {
+					nodeType = BinaryNode.notEqual;
+				}
+				result = new BinaryNode(nodeType, PrimitiveType.BooleanType,
+					left, right);
+			} else
+				parseError(44);
 		}
+		stop("relExpression");
+		return result;
+	}
 
+	private Ast convertToReal(Ast thingamajig) {
+		return new UnaryNode(UnaryNode.convertToReal, PrimitiveType.RealType, thingamajig);
+	}
+
+	//TODO: may have the order of things wrong, his statements are ambiguous.
+	//will test further and come back here if there are issues.
 	private Ast plusExpression (SymbolTable sym) throws ParseException {
 		start("plusExpression");
-		timesExpression(sym);
+		Ast result = timesExpression(sym);
+		Ast right = null;
+		String op = lex.tokenText();
+		int nodeType = 0;
+		Type resultType = null;
+		Type rt = PrimitiveType.RealType;
+		Type it = PrimitiveType.IntegerType;
 		while (lex.match("+") || lex.match("-") || lex.match("<<")) {
 			lex.nextLex();
-			timesExpression(sym);
-			}
-		stop("plusExpression");
-		return null;
-		}
+			right = timesExpression(sym);
 
+			if(op.equals("+")) {
+				if(right.type == rt || result.type == rt) {
+					result = convertToReal(result);
+					right = convertToReal(right);
+					resultType = rt;
+				} else {
+					resultType = it;
+				}
+				nodeType = BinaryNode.plus;
+			} else if(op.equals("-")) {
+				if(right.type == rt || result.type == rt) {
+					result = convertToReal(result);
+					right = convertToReal(right);
+					resultType = rt;
+				} else {
+					resultType = it;
+				}
+				nodeType = BinaryNode.minus;
+			} else if(op.equals("<<")) {
+				if(result.type != it || right.type != it)
+					parseError(41);
+				nodeType = BinaryNode.leftShift;
+				resultType = it; //int left shifted by an int is another int
+			}
+			if((right.type != it || right.type != rt) || 
+					((result.type != it || result.type != rt))) {
+				parseError(46);
+			}
+			if(right.type != result.type)
+				parseError(44);
+			//ok past all the tests...do the magic
+			result = new BinaryNode(nodeType, resultType, result, right);
+		}
+		stop("plusExpression");
+		return result;
+	}
+
+	//TODO: same as for plusExpression...may be incorrect ordering.
 	private Ast timesExpression (SymbolTable sym) throws ParseException {
 		start("timesExpression");
-		term(sym);
+		Ast result = term(sym);
+		Ast right = null;
+		String op = lex.tokenText();
+		int nodeType = 0;
+		Type resultType = null;
+		Type rt = PrimitiveType.RealType;
+		Type it = PrimitiveType.IntegerType;
 		while (lex.match("*") || lex.match("/") || lex.match("%")) {
 			lex.nextLex();
-			term(sym);
+			right = term(sym);
+
+			if(op.equals("*")) {
+				if(right.type == rt || result.type == rt) {
+					convertToReal(result);
+					convertToReal(right);
+					resultType = rt;
+				} else {
+					resultType = it;
+				}
+				nodeType = BinaryNode.times;
+			} else if(op.equals("/")) {
+				if(right.type == rt || result.type == it) {
+					convertToReal(result);
+					convertToReal(right);
+					resultType = rt;
+				} else {
+					resultType = it;
+				}
+				nodeType = BinaryNode.divide;
+			} else if(op.equals("%")) {
+				if(right.type != it || result.type != it)
+					parseError(41);
+				resultType = it;
+				nodeType = BinaryNode.remainder;
 			}
-		stop("timesExpression");
-		return null;
+			if((right.type != it || right.type != rt) ||
+					((result.type != it || result.type != rt))) {
+				parseError(46);
+			}
+			if(right.type != result.type) {
+				parseError(44);
+			}
+			result = new BinaryNode(nodeType, resultType, result, right);
 		}
+		stop("timesExpression");
+		return result;
+	}
 
 	private Ast term (SymbolTable sym) throws ParseException {
 		start("term");
+		Ast result = null;
+		Type resultType = null;
+
+		//TODO: ambiguous directions...i don't think i need to check anything for ()
 		if (lex.match("(")) {
 			lex.nextLex();
-			expression(sym);
+			result = expression(sym);
 			if (! lex.match(")"))
 				parseError(22);
 			lex.nextLex();
-			}
-		else if (lex.match("not")) {
+		} else if (lex.match("not")) {
 			lex.nextLex();
-			term(sym);
-			}
-		else if (lex.match("new")) {
+			result = term(sym);
+			if(result.type != PrimitiveType.BooleanType)
+				parseError(43);
+			result = new UnaryNode(UnaryNode.notOp, PrimitiveType.BooleanType, result);
+		} else if (lex.match("new")) {
 			lex.nextLex();
-			type(sym);
-			}
-		else if (lex.match("-")) {
+			result = type(sym);
+			//TODO: is this right?
+			result = new UnaryNode(UnaryNode.newOp, PrimitiveType.AddressType, new IntegerNode(result.size()));
+		} else if (lex.match("-")) {
 			lex.nextLex();
-			term(sym);
+			result = term(sym);
+			if(result.type == PrimitiveType.IntegerType) {
+			   resultType = PrimitiveType.IntegerType;
+			} else if(result.type != PrimitiveType.RealType) {
+				resultType = PrimitiveType.RealType;
+			} else {
+				parseError(46);
 			}
-		else if (lex.match("&")) {
+			result = new UnaryNode(UnaryNode.negation, resultType, result);
+		} else if (lex.match("&")) {
 			lex.nextLex();
-			reference(sym);
-			}
-		else if (lex.tokenCategory() == lex.intToken) {
+			result = reference(sym);
+			result.type = new PointerType(result.type.baseType); //TODO: is this right?
+		} else if (lex.tokenCategory() == lex.intToken) {
 			lex.nextLex();
-			}
-		else if (lex.tokenCategory() == lex.realToken) {
+		} else if (lex.tokenCategory() == lex.realToken) {
 			lex.nextLex();
-			}
-		else if (lex.tokenCategory() == lex.stringToken) {
+		} else if (lex.tokenCategory() == lex.stringToken) {
 			lex.nextLex();
-			}
-		else if (lex.isIdentifier()) {
+		} else if (lex.isIdentifier()) {
 			Ast val = reference(sym);
 			if (lex.match("(")) {
 				lex.nextLex();
@@ -542,12 +659,11 @@ public class Parser {
 					parseError(22);
 				lex.nextLex();
 				}
-			}
-		else
+		} else
 			parseError(33);
 		stop("term");
 		return null;
-		}
+	}
 
 	private Type addressBaseType(Type t) throws ParseException {
 		if (! (t instanceof AddressType))
