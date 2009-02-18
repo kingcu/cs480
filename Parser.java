@@ -373,23 +373,31 @@ public class Parser {
 			throw new ParseException(21);
 		else
 			lex.nextLex();
-		expression(sym);
+		Ast condition = expression(sym);
+        if(condition.type != PrimitiveType.BooleanType)
+            parseError(43);
+        Label l1 = new Label();
+        condition.branchIfFalse(l1);
 		if (! lex.match(")")) {
 			throw new ParseException(22);
 		} else
 			lex.nextLex();
 		statement(sym);
 		if (lex.match("else")) {
+            Label l2 = new Label();
+            condition.branchIfFalse(l2);
+            l1.genCode();
 			lex.nextLex();
 			statement(sym);
-			}
+            l2.genCode();
+		} else {
+            l1.genCode();
+        }
 		stop("ifStatement");
-		}
+	}
 
 	private void whileStatement (SymbolTable sym) throws ParseException {
 		start("whileStatement");
-		Ast termination = null;
-		Ast yay = null;
 		if (! lex.match("while"))
 			parseError(16);
 		lex.nextLex();
@@ -397,24 +405,23 @@ public class Parser {
 			throw new ParseException(21);
 		else
 			lex.nextLex();
-		termination = expression(sym);
-		if(termination.type != PrimitiveType.BooleanType)
+		Ast condition = expression(sym);
+		if(condition.type != PrimitiveType.BooleanType)
 			parseError(43);
 		Label l1 = new Label();
 		Label l2 = new Label();
 		l1.genCode();
-		termination.branchIfFalse(l2);
-		termination.genCode(); //TODO: is ths right??  man his instructions are ambiguous
-		termination.branchIfTrue(l1); //TODO: is this right??
-		l2.genCode();
+		condition.branchIfFalse(l2);
+		condition.genCode(); //TODO: is ths right??  man his instructions are ambiguous
 		if (! lex.match(")")) {
 			throw new ParseException(22);
 		} else
 			lex.nextLex();
 		statement(sym);
+        l1.genBranch();
 		l2.genCode();
 		stop("whileStatement");
-		}
+    }
 
 	private void assignOrFunction (SymbolTable sym) throws ParseException {
 		start("assignOrFunction");
