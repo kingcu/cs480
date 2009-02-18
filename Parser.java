@@ -645,11 +645,11 @@ public class Parser {
 			result = reference(sym);
 			result.type = new PointerType(result.type.baseType); //TODO: is this right?
 		} else if (lex.tokenCategory() == lex.intToken) {
-			lex.nextLex();
+			result = new IntegerNode(new Integer(lex.nextLex()));
 		} else if (lex.tokenCategory() == lex.realToken) {
-			lex.nextLex();
+			result = new RealNode(new Double(lex.nextLex()));
 		} else if (lex.tokenCategory() == lex.stringToken) {
-			lex.nextLex();
+			result = new StringNode(lex.nextLex());
 		} else if (lex.isIdentifier()) {
 			Ast val = reference(sym);
 			if (lex.match("(")) {
