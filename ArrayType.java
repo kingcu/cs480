@@ -13,4 +13,13 @@ class ArrayType extends Type {
 		return "Array " + lowerBound + " to " + upperBound + 
 			" of " + elementType;
 		}
+
+	public boolean equals (Object t) {
+		if (! (t instanceof ArrayType))
+			return false;
+		ArrayType pt = (ArrayType) t;
+		if ((pt.lowerBound != lowerBound) || (pt.upperBound != upperBound))
+			return false;
+		return elementType.equals(pt.elementType);
+		}
 }

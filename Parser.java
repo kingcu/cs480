@@ -4,6 +4,8 @@
 //		modified by:
 //
 
+import java.util.Vector;
+
 public class Parser {
 	private Lexer lex;
 	private boolean debug;
@@ -221,8 +223,9 @@ public class Parser {
 			parseError(21);
 		lex.nextLex();
 		argumentList(sym);
-		if (! lex.match(")"))
+		if (! lex.match(")")) {
 			parseError(22);
+		}
 		lex.nextLex();
 		stop("arguments");
 		}
@@ -353,8 +356,9 @@ public class Parser {
 		if (lex.match("(")) {
 			lex.nextLex();
 			expression(sym);
-			if (! lex.match(")"))
+			if (! lex.match(")")) {
 				parseError(22);
+			}
 			lex.nextLex();
 			}
 		stop("returnStatement");
@@ -370,9 +374,9 @@ public class Parser {
 		else
 			lex.nextLex();
 		expression(sym);
-		if (! lex.match(")"))
+		if (! lex.match(")")) {
 			throw new ParseException(22);
-		else
+		} else
 			lex.nextLex();
 		statement(sym);
 		if (lex.match("else")) {
@@ -384,6 +388,8 @@ public class Parser {
 
 	private void whileStatement (SymbolTable sym) throws ParseException {
 		start("whileStatement");
+		Ast termination = null;
+		Ast yay = null;
 		if (! lex.match("while"))
 			parseError(16);
 		lex.nextLex();
@@ -391,52 +397,77 @@ public class Parser {
 			throw new ParseException(21);
 		else
 			lex.nextLex();
-		expression(sym);
-		if (! lex.match(")"))
+		termination = expression(sym);
+		if(termination.type != PrimitiveType.BooleanType)
+			parseError(43);
+		Label l1 = new Label();
+		Label l2 = new Label();
+		l1.genCode();
+		termination.branchIfFalse(l2);
+		termination.genCode(); //TODO: is ths right??  man his instructions are ambiguous
+		termination.branchIfTrue(l1); //TODO: is this right??
+		l2.genCode();
+		if (! lex.match(")")) {
 			throw new ParseException(22);
-		else
+		} else
 			lex.nextLex();
 		statement(sym);
+		l2.genCode();
 		stop("whileStatement");
 		}
 
 	private void assignOrFunction (SymbolTable sym) throws ParseException {
 		start("assignOrFunction");
 		Ast val = reference(sym);
+		Type bt = addressBaseType(val.type);
+		Ast result = null;
 		if (lex.match("=")) {
 			lex.nextLex();
-			expression(sym);
+			result = expression(sym);
+			if(result.type != bt) {
+				parseError(44);
 			}
-		else if (lex.match("(")) {
+			CodeGen.genAssign(val, result);
+		} else if (lex.match("(")) {
+			if(!(val.type instanceof FunctionType))
+				parseError(45);
 			lex.nextLex();
-			parameterList(sym);
-			if (! lex.match(")"))
+			Vector params = parameterList(sym);
+			if (! lex.match(")")) {
 				parseError(22);
-			lex.nextLex();
 			}
+			result = new FunctionCallNode(val, params);
+			//TODO: check argument types as like funtion calls in expressions??
+			result.genCode();
+			lex.nextLex();
+		}
 		else
 			parseError(20);
 		stop("assignOrFunction");
 		}
 
-	private void parameterList (SymbolTable sym) throws ParseException {
+	//TODO: instructions mention checking types here...wtf?
+	private Vector parameterList (SymbolTable sym) throws ParseException {
 		start("parameterList");
+		Ast blarg = null;
+		Vector returnVec = new Vector();
 		if (firstExpression()) {
 			expression(sym);
 			while (lex.match(",")) {
 				lex.nextLex();
-				expression(sym);
-				}
+				returnVec.addElement(expression(sym));
 			}
-		stop("parameterList");
 		}
+		stop("parameterList");
+		return returnVec;
+	}
 		
 	private boolean MustBeBoolean (Ast value) throws ParseException {
 		if (value.type == PrimitiveType.BooleanType)
 			return true;
 		parseError(43);
 		return false;
-		}
+	}
 
 	private Ast expression (SymbolTable sym) throws ParseException {
 		start("expression");
@@ -455,7 +486,7 @@ public class Parser {
 			}
 		stop("expression");
 		return result;
-		}
+	}
 
 	private boolean relOp() {
 		if (lex.match("<") || lex.match("<=") ||
@@ -467,16 +498,15 @@ public class Parser {
 
 	private Ast relExpression (SymbolTable sym) throws ParseException {
 		start("relExpression");
-		Ast left = plusExpression(sym);
+		Ast result = plusExpression(sym);
 		Ast right = null;
-		Ast result = null;
 		String op = null;
 		int nodeType = 0;
 		if (relOp()) {
 			op = lex.tokenText();
 			lex.nextLex();
 			right = plusExpression(sym);
-			if(left.type == right.type) {
+			if(result.type.equals(right.type)) {
 				if(op.equals(">")) {
 					nodeType = BinaryNode.greater;
 				} else if(op.equals("<")) {
@@ -491,7 +521,7 @@ public class Parser {
 					nodeType = BinaryNode.notEqual;
 				}
 				result = new BinaryNode(nodeType, PrimitiveType.BooleanType,
-					left, right);
+					result, right);
 			} else
 				parseError(44);
 		}
@@ -519,7 +549,7 @@ public class Parser {
 			right = timesExpression(sym);
 
 			if(op.equals("+")) {
-				if(right.type == rt || result.type == rt) {
+				if(right.type.equals(rt) || result.type.equals(rt)) {
 					result = convertToReal(result);
 					right = convertToReal(right);
 					resultType = rt;
@@ -528,7 +558,7 @@ public class Parser {
 				}
 				nodeType = BinaryNode.plus;
 			} else if(op.equals("-")) {
-				if(right.type == rt || result.type == rt) {
+				if(right.type.equals(rt) || result.type.equals(rt)) {
 					result = convertToReal(result);
 					right = convertToReal(right);
 					resultType = rt;
@@ -537,16 +567,16 @@ public class Parser {
 				}
 				nodeType = BinaryNode.minus;
 			} else if(op.equals("<<")) {
-				if(result.type != it || right.type != it)
+				if(result.type.equals(it) == false || right.type.equals(it) == false)
 					parseError(41);
 				nodeType = BinaryNode.leftShift;
 				resultType = it; //int left shifted by an int is another int
 			}
-			if((right.type != it || right.type != rt) || 
-					((result.type != it || result.type != rt))) {
+			if((right.type.equals(it) == false && right.type.equals(rt) == false) ||
+					(result.type.equals(it) == false && result.type.equals(rt) == false)) {
 				parseError(46);
 			}
-			if(right.type != result.type)
+			if(!right.type.equals(result.type))
 				parseError(44);
 			//ok past all the tests...do the magic
 			result = new BinaryNode(nodeType, resultType, result, right);
@@ -570,34 +600,34 @@ public class Parser {
 			right = term(sym);
 
 			if(op.equals("*")) {
-				if(right.type == rt || result.type == rt) {
-					convertToReal(result);
-					convertToReal(right);
+				if(right.type.equals(rt) || result.type.equals(rt)) {
+					result = convertToReal(result);
+					right = convertToReal(right);
 					resultType = rt;
 				} else {
 					resultType = it;
 				}
 				nodeType = BinaryNode.times;
 			} else if(op.equals("/")) {
-				if(right.type == rt || result.type == it) {
-					convertToReal(result);
-					convertToReal(right);
+				if(right.type.equals(rt) || result.type.equals(rt)) {
+					result = convertToReal(result);
+					right = convertToReal(right);
 					resultType = rt;
 				} else {
 					resultType = it;
 				}
 				nodeType = BinaryNode.divide;
 			} else if(op.equals("%")) {
-				if(right.type != it || result.type != it)
+				if(right.type.equals(it) == false || result.type.equals(it) == false)
 					parseError(41);
 				resultType = it;
 				nodeType = BinaryNode.remainder;
 			}
-			if((right.type != it || right.type != rt) ||
-					((result.type != it || result.type != rt))) {
+			if((right.type.equals(it) == false && right.type.equals(rt) == false) ||
+					(result.type.equals(it) == false && result.type.equals(rt) == false)) {
 				parseError(46);
 			}
-			if(right.type != result.type) {
+			if(!right.type.equals(result.type)) {
 				parseError(44);
 			}
 			result = new BinaryNode(nodeType, resultType, result, right);
@@ -621,20 +651,20 @@ public class Parser {
 		} else if (lex.match("not")) {
 			lex.nextLex();
 			result = term(sym);
-			if(result.type != PrimitiveType.BooleanType)
+			if(!result.type.equals(PrimitiveType.BooleanType))
 				parseError(43);
 			result = new UnaryNode(UnaryNode.notOp, PrimitiveType.BooleanType, result);
 		} else if (lex.match("new")) {
 			lex.nextLex();
-			result = type(sym);
+			Type shit = type(sym);
 			//TODO: is this right?
-			result = new UnaryNode(UnaryNode.newOp, PrimitiveType.AddressType, new IntegerNode(result.size()));
+			result = new UnaryNode(UnaryNode.newOp, new AddressType(shit), new IntegerNode(shit.size()));
 		} else if (lex.match("-")) {
 			lex.nextLex();
 			result = term(sym);
-			if(result.type == PrimitiveType.IntegerType) {
+			if(result.type.equals(PrimitiveType.IntegerType)) {
 			   resultType = PrimitiveType.IntegerType;
-			} else if(result.type != PrimitiveType.RealType) {
+			} else if(result.type.equals(PrimitiveType.RealType)) {
 				resultType = PrimitiveType.RealType;
 			} else {
 				parseError(46);
@@ -643,26 +673,36 @@ public class Parser {
 		} else if (lex.match("&")) {
 			lex.nextLex();
 			result = reference(sym);
-			result.type = new PointerType(result.type.baseType); //TODO: is this right?
+			result.type = new PointerType(result.type); //TODO: is this right?
 		} else if (lex.tokenCategory() == lex.intToken) {
-			result = new IntegerNode(new Integer(lex.nextLex()));
+			result = new IntegerNode(new Integer(lex.tokenText()));
+			lex.nextLex();
 		} else if (lex.tokenCategory() == lex.realToken) {
-			result = new RealNode(new Double(lex.nextLex()));
+			result = new RealNode(new Double(lex.tokenText()));
+			lex.nextLex();
 		} else if (lex.tokenCategory() == lex.stringToken) {
-			result = new StringNode(lex.nextLex());
+			result = new StringNode(lex.tokenText());
+			lex.nextLex();
 		} else if (lex.isIdentifier()) {
-			Ast val = reference(sym);
+			result = reference(sym);
 			if (lex.match("(")) {
+				if(!(result.type instanceof FunctionType))
+					parseError(45);
 				lex.nextLex();
-				parameterList(sym);
-				if (! lex.match(")"))
+				Vector fuck = parameterList(sym);
+				if (! lex.match(")")) {
 					parseError(22);
-				lex.nextLex();
 				}
-		} else
+				lex.nextLex();
+				result = new FunctionCallNode(result, fuck);
+			} else if(result.type instanceof AddressType) {
+				result = new UnaryNode(UnaryNode.dereference, addressBaseType(result.type), result);
+			}
+		} else {
 			parseError(33);
+		}
 		stop("term");
-		return null;
+		return result;
 	}
 
 	private Type addressBaseType(Type t) throws ParseException {
