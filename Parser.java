@@ -160,9 +160,12 @@ public class Parser {
 		if (! lex.match(":"))
 			parseError(19);
 		lex.nextLex();
-		sym.enterIdentifier(name, type(sym));
+		Type blarg = type(sym);
+		sym.enterIdentifier(name, blarg);
+		if(sym instanceof GlobalSymbolTable)
+			CodeGen.genGlobal(name, blarg.size());
 		stop("nameDeclaration");
-		}
+	}
 
 	private void classDeclaration(SymbolTable sym) throws ParseException {
 		start("classDeclaration");
@@ -350,19 +353,21 @@ public class Parser {
 
 	private void returnStatement (SymbolTable sym) throws ParseException {
 		start("returnStatement");
+		Ast val = null;
 		if (! lex.match("return"))
 			parseError(12);
 		lex.nextLex();
 		if (lex.match("(")) {
 			lex.nextLex();
-			expression(sym);
+			val = expression(sym);
 			if (! lex.match(")")) {
 				parseError(22);
 			}
 			lex.nextLex();
-			}
-		stop("returnStatement");
 		}
+		CodeGen.genReturn(val);
+		stop("returnStatement");
+	}
 
 	private void ifStatement (SymbolTable sym) throws ParseException {
 		start("ifStatement");
@@ -385,7 +390,7 @@ public class Parser {
 		statement(sym);
 		if (lex.match("else")) {
             Label l2 = new Label();
-            condition.branchIfFalse(l2);
+			l2.genBranch();
             l1.genCode();
 			lex.nextLex();
 			statement(sym);
@@ -412,7 +417,6 @@ public class Parser {
 		Label l2 = new Label();
 		l1.genCode();
 		condition.branchIfFalse(l2);
-		condition.genCode(); //TODO: is ths right??  man his instructions are ambiguous
 		if (! lex.match(")")) {
 			throw new ParseException(22);
 		} else
@@ -426,12 +430,21 @@ public class Parser {
 	private void assignOrFunction (SymbolTable sym) throws ParseException {
 		start("assignOrFunction");
 		Ast val = reference(sym);
-		Type bt = addressBaseType(val.type);
 		Ast result = null;
 		if (lex.match("=")) {
+			Type bt = addressBaseType(val.type);
 			lex.nextLex();
 			result = expression(sym);
-			if(result.type != bt) {
+			Type resultType = result.type;
+			while(bt instanceof PointerType) {
+				PointerType arg = (PointerType)bt;
+				bt = arg.baseType;
+				while(resultType instanceof PointerType) {
+					PointerType blarg = (PointerType)resultType;
+					resultType = blarg.baseType;
+				}
+			}	
+			if(resultType != bt) {
 				parseError(44);
 			}
 			CodeGen.genAssign(val, result);
@@ -451,7 +464,7 @@ public class Parser {
 		else
 			parseError(20);
 		stop("assignOrFunction");
-		}
+	}
 
 	//TODO: instructions mention checking types here...wtf?
 	private Vector parameterList (SymbolTable sym) throws ParseException {
@@ -459,7 +472,7 @@ public class Parser {
 		Ast blarg = null;
 		Vector returnVec = new Vector();
 		if (firstExpression()) {
-			expression(sym);
+			returnVec.addElement(expression(sym));
 			while (lex.match(",")) {
 				lex.nextLex();
 				returnVec.addElement(expression(sym));
@@ -556,22 +569,20 @@ public class Parser {
 			right = timesExpression(sym);
 
 			if(op.equals("+")) {
-				if(right.type.equals(rt) || result.type.equals(rt)) {
+				if(right.type.equals(rt) && result.type.equals(it)) {
 					result = convertToReal(result);
+				} else if(result.type.equals(rt) && right.type.equals(it)) {
 					right = convertToReal(right);
-					resultType = rt;
-				} else {
-					resultType = it;
 				}
+				resultType = right.type == rt ? rt : it;
 				nodeType = BinaryNode.plus;
 			} else if(op.equals("-")) {
-				if(right.type.equals(rt) || result.type.equals(rt)) {
+				if(right.type.equals(rt) && result.type.equals(it)) {
 					result = convertToReal(result);
+				} else if(result.type.equals(rt) && right.type.equals(it)) {
 					right = convertToReal(right);
-					resultType = rt;
-				} else {
-					resultType = it;
 				}
+				resultType = right.type == rt ? rt : it;
 				nodeType = BinaryNode.minus;
 			} else if(op.equals("<<")) {
 				if(result.type.equals(it) == false || right.type.equals(it) == false)
@@ -607,22 +618,20 @@ public class Parser {
 			right = term(sym);
 
 			if(op.equals("*")) {
-				if(right.type.equals(rt) || result.type.equals(rt)) {
+				if(right.type.equals(rt) && result.type.equals(it)) {
 					result = convertToReal(result);
+				} else if(result.type.equals(rt) && right.type.equals(it)) {
 					right = convertToReal(right);
-					resultType = rt;
-				} else {
-					resultType = it;
 				}
+				resultType = right.type == rt ? rt : it;
 				nodeType = BinaryNode.times;
 			} else if(op.equals("/")) {
-				if(right.type.equals(rt) || result.type.equals(rt)) {
+				if(right.type.equals(rt) && result.type.equals(it)) {
 					result = convertToReal(result);
+				} else if(result.type.equals(rt) && right.type.equals(it)) {
 					right = convertToReal(right);
-					resultType = rt;
-				} else {
-					resultType = it;
 				}
+				resultType = right.type == rt ? rt : it;
 				nodeType = BinaryNode.divide;
 			} else if(op.equals("%")) {
 				if(right.type.equals(it) == false || result.type.equals(it) == false)
@@ -665,7 +674,7 @@ public class Parser {
 			lex.nextLex();
 			Type shit = type(sym);
 			//TODO: is this right?
-			result = new UnaryNode(UnaryNode.newOp, new AddressType(shit), new IntegerNode(shit.size()));
+			result = new UnaryNode(UnaryNode.newOp, new PointerType(shit), new IntegerNode(shit.size()));
 		} else if (lex.match("-")) {
 			lex.nextLex();
 			result = term(sym);
@@ -697,6 +706,16 @@ public class Parser {
 					parseError(45);
 				lex.nextLex();
 				Vector fuck = parameterList(sym);
+			/*	
+				//TODO: this may be incorrect, come back and check
+				FunctionCallNode fcn = (FunctionCallNode)result;
+				for(int i = 0; i < fuck.size(); i++) {
+					Ast param = (Ast)fuck.elementAt(i);
+					Ast param2 = (Ast)fcn.args.elementAt(i);
+					if(param.type != param2.type)
+						parseError(44);
+				}
+			*/
 				if (! lex.match(")")) {
 					parseError(22);
 				}
