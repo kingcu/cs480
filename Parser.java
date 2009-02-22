@@ -439,14 +439,12 @@ public class Parser {
 			while(bt instanceof PointerType) {
 				PointerType arg = (PointerType)bt;
 				bt = arg.baseType;
-				while(resultType instanceof PointerType) {
-					PointerType blarg = (PointerType)resultType;
-					resultType = blarg.baseType;
-				}
+                PointerType blarg = (PointerType)resultType;
+                resultType = blarg.baseType;
+                if(resultType != bt) {
+                    parseError(44);
+                }
 			}	
-			if(resultType != bt) {
-				parseError(44);
-			}
 			CodeGen.genAssign(val, result);
 		} else if (lex.match("(")) {
 			if(!(val.type instanceof FunctionType))
