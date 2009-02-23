@@ -1,7 +1,8 @@
 //
 //	parser skeleton, CS 480/580, Winter 1998
 //	written by Tim Budd
-//		modified by:
+//      modified by:    Cullen King <kingcu@onid.orst.edu>
+//                    Wojtek Rajski <rajskiw@onid.orst.edu>
 //
 
 import java.util.Vector;
