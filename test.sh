@@ -1,12 +1,12 @@
 #!/bin/bash
 
-rm *.class ; javac Asgn4.java
+rm *.class ; javac Asgn5.java
 rm diffs;
 
-for file in `ls tests/asgn4/* | grep -v "\.[so]$"`
+for file in `ls tests/* | grep -v "\.[so]$"`
 do
 	java Asgn4 $file > $file.o
 	diff -u $file.o $file.s >> diffs
 done
 
-rm tests/asgn4/*.o 
+rm tests/*.o 

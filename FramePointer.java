@@ -1,4 +1,3 @@
-
 class FramePointer extends Ast {
 	public FramePointer () { super(PrimitiveType.VoidType); }
 
@@ -8,4 +7,3 @@ class FramePointer extends Ast {
 
 	public String toString() { return "frame pointer"; }
 }
-

@@ -1,4 +1,3 @@
-
 class ClassSymbolTable implements SymbolTable {
 	private SymbolTable surround = null;
 
@@ -73,4 +72,3 @@ class ClassSymbolTable implements SymbolTable {
 
 	public int size () { return currentSize; }
 }
-

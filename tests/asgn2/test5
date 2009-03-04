@@ -1,5 +1,0 @@
-function main ()
-begin
-	x = 2++;
-end
-

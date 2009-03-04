@@ -1,5 +1,0 @@
-{ this { is odd } }
-function x ()
-begin
-   reference()
-end

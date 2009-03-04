@@ -1,5 +1,0 @@
-function main ()
-begin
-	if (a == b) c = d;
-end;
-

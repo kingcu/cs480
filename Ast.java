@@ -18,4 +18,6 @@ abstract class Ast {
 		genCode();
 		System.out.println("Branch if False " + lab);
 	}
+
+    public Ast optimize() {return this;}
 }

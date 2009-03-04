@@ -59,3 +59,4 @@ class GlobalSymbolTable implements SymbolTable {
 
 	public int size () { return 0; }
 }
+

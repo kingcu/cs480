@@ -22,4 +22,5 @@ class ArrayType extends Type {
 			return false;
 		return elementType.equals(pt.elementType);
 		}
+
 }

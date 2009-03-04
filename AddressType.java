@@ -1,5 +1,5 @@
 class AddressType extends PrimitiveType {
-	public final Type baseType;
+	protected final Type baseType;
 
 	public AddressType (Type t) { super(4); baseType = t; }
 

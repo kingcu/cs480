@@ -1,5 +1,5 @@
 class PointerType extends PrimitiveType {
-	public final Type baseType;
+	protected final Type baseType;
 
 	public PointerType (Type t) { super(4); baseType = t; }
 

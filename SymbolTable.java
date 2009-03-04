@@ -15,4 +15,3 @@ interface SymbolTable {
 	public Ast lookupName (Ast base, String name) throws ParseException;
 	public int size ();
 }
-
