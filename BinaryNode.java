@@ -62,4 +62,87 @@ class BinaryNode extends Ast {
 	public int NodeType;
 	public Ast LeftChild;
 	public Ast RightChild;
+
+    public Ast optimize() {
+        Ast tmpAst;
+        Ast lc = LeftChild.optimize();
+        Ast rc = RightChild.optimize();
+        BinaryNode lca;
+        BinaryNode rca;
+
+        //PLUS SECTION
+        if(NodeType == BinaryNode.plus) {
+            if(lc.isIntConst() && !rc.isIntConst()) {
+                tmpAst = lc;
+                lc = rc;
+                rc = tmpAst;
+            }
+            if(lc.isIntConst() && rc.isIntConst()) {
+                return new IntegerNode(lc.intConst() + rc.intConst());
+            }
+
+            if(rc.isIntConst() && rc.intConst() == 0) {
+                lc.type = type;
+                return lc;
+            }
+
+            lca = lc.additionNode();
+            if(lca != null) {
+                if(rc.isIntConst() && lca.RightChild.isIntConst()) {
+                    rc = new IntegerNode(lca.RightChild.intConst() + rc.intConst());
+                    lc = lca.LeftChild;
+                    return new BinaryNode(NodeType, type, lc, rc).optimize();
+                }
+                if(!rc.isIntConst()) {
+                    tmpAst = lca.RightChild;
+                    lc = new BinaryNode(BinaryNode.plus, type, lca.LeftChild, RightChild);
+                    rc = tmpAst;
+                    return new BinaryNode(NodeType, type, lc, rc).optimize();
+                }
+            }
+
+            rca = rc.additionNode();
+            if(rca != null) {
+                if(rca.RightChild.isIntConst()) {
+                    tmpAst = lc;
+                    lc = new BinaryNode(BinaryNode.plus, type, lc, rca.LeftChild);
+                    rc = rca.RightChild;
+                    new BinaryNode(NodeType, type, lc, rc).optimize();
+                }
+            }
+        //MINUS SECTION
+        } else if(this.NodeType == BinaryNode.minus) {
+            if(rc.isIntConst()) {
+                return new BinaryNode(BinaryNode.plus, type, lc, 
+                        new IntegerNode(rc.intConst() * -1)).optimize();
+            }
+        //TIMES SECTION
+        } else if(this.NodeType == BinaryNode.times) {
+            if(lc.isIntConst() && !rc.isIntConst()) {
+                tmpAst = lc;
+                lc = rc;
+                rc = tmpAst;
+            }
+            if(lc.isIntConst() && rc.isIntConst()) {
+                return new IntegerNode(lc.intConst() * rc.intConst());
+            } 
+
+            if(lc.isIntConst() && lc.intConst() == 0 || 
+                    rc.isIntConst() && rc.intConst() == 0) {
+                return new IntegerNode(0);
+            }
+            if(rc.isIntConst() && rc.intConst() == 1) {
+                return lc; //TODO: do we need to make a new node?
+            }
+
+            lca = LeftChild.additionNode();
+            if(lca != null && lca.RightChild.isIntConst() && rc.isIntConst()) {
+                return new BinaryNode(BinaryNode.plus, type, 
+                        new BinaryNode(BinaryNode.times, type, lca.LeftChild, rc),
+                        new BinaryNode(BinaryNode.times, type, lca.RightChild, rc)).optimize();
+            }
+        }
+
+        return new BinaryNode(NodeType, type, lc, rc);
+    }
 }

@@ -33,4 +33,13 @@ class UnaryNode extends Ast {
 				System.out.println("new memory " + type); break;
 		}
 	}
+
+    public Ast optimize() {
+        Ast tmpChild = child.optimize();
+        if(nodeType == UnaryNode.negation && tmpChild.isIntConst()) {
+            return new IntegerNode(tmpChild.intConst() * -1);
+        } else {
+            return new UnaryNode(nodeType, type, tmpChild);
+        }
+    }
 }

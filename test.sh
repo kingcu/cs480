@@ -5,7 +5,7 @@ rm diffs;
 
 for file in `ls tests/* | grep -v "\.[so]$"`
 do
-	java Asgn4 $file > $file.o
+	java Asgn5 $file > $file.o
 	diff -u $file.o $file.s >> diffs
 done
 

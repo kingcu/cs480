@@ -23,4 +23,14 @@ class FunctionCallNode extends Ast {
 		fun.genCode();
 		System.out.println("function call " + type);
 	}
+
+    public Ast optimize() {
+        int i;
+        Vector newArgs = new Vector();
+        for(i = 0; i < args.size(); i++) {
+            Ast blech = (Ast)args.get(i);
+            newArgs.addElement(blech.optimize());
+        }
+        return new FunctionCallNode(fun.optimize(), newArgs);
+    }
 }
